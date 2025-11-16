@@ -20,9 +20,9 @@ class EmbedModels(ModelEnum):
     )
     VOYAGE_3_5 = (
         "voyage-3.5",
-        ModelProvider.ANTHROPIC,
+        ModelProvider.VOYAGE_AI,
     )
     VOYAGE_3_5_LITE = (
         "voyage-3.5-lite",
-        ModelProvider.ANTHROPIC,
+        ModelProvider.VOYAGE_AI,
     )

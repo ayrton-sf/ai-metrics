@@ -99,7 +99,7 @@ class Metrics:
         arr = np.array(entry["scores"])
         entry["mean"] = float(arr.mean())
         entry["std"] = float(arr.std()) if len(arr) > 1 else 0.0
-        entry["suggested_threshold"] = float(entry["mean"] - entry["std"])
+        entry["suggested_threshold"] = float(entry["mean"] - (2 * entry["std"]))
 
         self._save_json(ref_path, data)
         return score

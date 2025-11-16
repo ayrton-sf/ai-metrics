@@ -1,6 +1,6 @@
 # 🤖 AIM - AI Metrics
 
-A modular and extensible toolkit to **evaluate LLM outputs** using various metrics including **criteria-based evaluation**, **factual claim checking**, and **semantic similarity**, with support for multiple data backends like **web search**, **vector retrieval**, and **custom retrievers**.
+A GenAI based metrics framework to **evaluate LLM outputs** using various metrics including **criteria-based evaluation**, **factual claim checking**, and **semantic similarity**, with support for multiple data backends like **web search**, **vector retrieval**, and **custom retrievers**.
 
 > ⚠️ **WIP:** This toolkit is a work in progress. APIs, behaviors, and outputs are subject to change.
 
@@ -29,7 +29,6 @@ A modular and extensible toolkit to **evaluate LLM outputs** using various metri
   - `text-embedding-ada-002`
 - **Voyage AI**
   - `voyage-3-large`
-- **Anthropic**
   - `voyage-3.5`
   - `voyage-3.5-lite`
 
@@ -66,6 +65,25 @@ metrics = Metrics(
     criteria_check_threshold=0.95,   # 95% instead of default 90%
     similarity_threshold=0.80        # 80% for semantic similarity
 )
+```
+
+### 🎯 Threshold Hierarchy
+
+Thresholds can be set at three levels (highest priority first):
+
+1. **Call-level** – passed directly to the metric method
+2. **Class-level** – set during `Metrics` initialization  
+3. **Default** – from `ExecutionMode.default_thresholds` (90% for claim/criteria) or baseline reference file (for similarity)
+
+```python
+# Default threshold (90%)
+result = metrics.criteria_check(content, criteria)
+
+# Class-level threshold (85%)
+metrics = Metrics(..., criteria_check_threshold=0.85)
+
+# Call-level threshold (95%) - highest priority
+result = metrics.criteria_check(content, criteria, threshold=0.95)
 ```
 
 ---
@@ -176,7 +194,7 @@ Each iteration:
 1. Executes your test
 2. Compares candidate against reference
 3. Accumulates scores in the reference file
-4. Updates `mean`, `std`, and `suggested_threshold = mean - std`
+4. Updates `mean`, `std`, and `suggested_threshold = mean - (2 * std)`
 
 Updated reference file after baseline:
 ```json
@@ -187,7 +205,7 @@ Updated reference file after baseline:
             "scores": [0.92, 0.89, 0.91, 0.88, 0.90, ...],
             "mean": 0.90,
             "std": 0.015,
-            "suggested_threshold": 0.885
+            "suggested_threshold": 0.87
         }
     }
 }
@@ -242,14 +260,17 @@ Verify factual consistency against various data sources using a pluggable retrie
 
 ### 🔌 With Custom Retriever (Recommended)
 
-The toolkit accepts any async function that takes a query string and returns a list of strings:
+The toolkit accepts any async function that takes a query string and returns a list of strings.
+
+**Important:** The `retriever_func` should retrieve the **same information your chatbot retrieves** when building its response. It acts as a **background check**, fetching the exact context/documents your application uses to generate answers. This ensures claims are validated against the actual knowledge base your chatbot consulted.
 
 ```python
 from aim.data_sources import DataSource
 
-# Define your custom retriever
+# Define your custom retriever - should match your chatbot's retrieval logic
 async def my_retriever(query: str) -> list[str]:
-    # Your retrieval logic here (vector DB, API, etc.)
+    # Use the SAME retrieval logic your chatbot uses (vector DB, API, etc.)
+    # This ensures you're checking against the same source of truth
     results = await my_vector_db.search(query)
     return [doc.content for doc in results]
 
@@ -295,7 +316,7 @@ result = await metrics.claim_check(
 )
 ```
 
-### 🗄️ With SQL/MCP
+### 🗄️ With MCP
 
 ```python
 from mcp import StdioServerParameters
@@ -313,12 +334,7 @@ result = await metrics.claim_check(
 )
 ```
 
-> ⚠️ **Note:** When using `DataSource.MCP`, the tool engages an **agentic loop** which leverages **MCP (Model Context Protocol)**.  
-> MCP enables a **retrieval subagent** to:
-> - Fetch table lists 🗂️  
-> - Select relevant tables 📊  
-> - Craft and run SQL queries dynamically 🔎  
-> ✅ Supports any MCP server (PostgreSQL, SQLite, etc.)
+> ⚠️ **Note:** When using `DataSource.MCP`, the tool engages an **agentic loop** which leverages **MCP (Model Context Protocol)**. MCP enables a **retrieval subagent** to dynamically interact with MCP servers, retrieving and processing information needed to validate claims. Supports any MCP server implementation.
 
 ---
 
@@ -326,13 +342,15 @@ result = await metrics.claim_check(
 
 - `DataSource.RETRIEVER` – pluggable custom retriever (recommended)
 - `DataSource.WEB` – web-grounded evaluation  
-- `DataSource.MCP` – structured data validation (via MCP, PostgreSQL default)
+- `DataSource.MCP` – structured data validation via Model Context Protocol
 
 ---
 
 ## 🖥️ CLI Usage
 
 The toolkit includes a CLI for running tests with different execution modes.
+
+> **Note:** You can run your tests with any test runner you prefer (pytest, unittest, etc.) without using the AIM CLI. However, **the CLI wrapper provides automatic saving of failed results** to `aim_data/failures/` for better transparency and debugging. Without the CLI, you'll need to manually handle failure logging if desired.
 
 ### Installation
 
@@ -353,6 +371,8 @@ In your test suite folder, create an `aim.config.json`:
     "run": "pytest"
 }
 ```
+
+> **Note:** The `run` field specifies the command used to execute your test suite (e.g., `pytest`, `python -m pytest`, `python -m unittest`, `pytest tests/`, etc.).
 
 ### Commands
 
@@ -464,25 +484,4 @@ async def test_chatbot_response():
             "Response should be helpful and professional"
         ]
     )
-```
-
----
-
-## 🎯 Threshold Hierarchy
-
-Thresholds can be set at three levels (highest priority first):
-
-1. **Call-level** – passed directly to the metric method
-2. **Class-level** – set during `Metrics` initialization  
-3. **Default** – from `ExecutionMode.default_thresholds` (90% for claim/criteria) or baseline statistics (for similarity)
-
-```python
-# Default threshold (90%)
-result = metrics.criteria_check(content, criteria)
-
-# Class-level threshold (85%)
-metrics = Metrics(..., criteria_check_threshold=0.85)
-
-# Call-level threshold (95%) - highest priority
-result = metrics.criteria_check(content, criteria, threshold=0.95)
 ```
