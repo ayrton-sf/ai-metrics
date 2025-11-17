@@ -10,8 +10,8 @@ class ExecutionModes(Enum):
     SET_BASELINE = "set-baseline"
 
 class DefaultThresholds():
-    claim_check = 0.90
-    general_criteria = 0.90
+    claim_check = 0.80
+    general_criteria = 0.80
 
 _initial_mode = ExecutionModes.ASSERT
 _aim_mode_env = os.getenv("AIM_MODE")

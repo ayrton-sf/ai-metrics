@@ -1,4 +1,5 @@
 import json
+import math
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 from .claim_checking.claim_checker import ClaimChecker
@@ -99,7 +100,7 @@ class Metrics:
         arr = np.array(entry["scores"])
         entry["mean"] = float(arr.mean())
         entry["std"] = float(arr.std()) if len(arr) > 1 else 0.0
-        entry["suggested_threshold"] = float(entry["mean"] - (4 * entry["std"]))
+        entry["suggested_threshold"] = float(arr.min() * 0.80)
 
         self._save_json(ref_path, data)
         return score
