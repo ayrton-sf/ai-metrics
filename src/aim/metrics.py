@@ -99,7 +99,7 @@ class Metrics:
         arr = np.array(entry["scores"])
         entry["mean"] = float(arr.mean())
         entry["std"] = float(arr.std()) if len(arr) > 1 else 0.0
-        entry["suggested_threshold"] = float(entry["mean"] - (2 * entry["std"]))
+        entry["suggested_threshold"] = float(entry["mean"] - (4 * entry["std"]))
 
         self._save_json(ref_path, data)
         return score
@@ -144,9 +144,13 @@ class Metrics:
     def criteria_check(
         self, content: str, criteria: List[str], threshold: Optional[float] = None
     ):
-        result = self._criteria_check_handler(content, criteria)
-        handler = self._criteria_handler(get_mode(), threshold)
-        return handler(result)
+        mode = get_mode()
+        if mode in [ExecutionModes.ASSERT, ExecutionModes.REPORT]:
+            result = self._criteria_check_handler(content, criteria)
+            handler = self._criteria_handler(mode, threshold)
+            return handler(result)
+
+        return None
 
     def _criteria_handler(self, mode, threshold=None):
         return {
@@ -200,9 +204,13 @@ class Metrics:
         threshold: Optional[float] = None,
         **kwargs
     ):
-        result = await self._claim_check_handler(content, data_source, **kwargs)
-        handler = self._claim_handler(get_mode(), threshold)
-        return handler(result)
+        mode = get_mode()
+        if mode in [ExecutionModes.ASSERT, ExecutionModes.REPORT]:
+            result = await self._claim_check_handler(content, data_source, **kwargs)
+            handler = self._claim_handler(mode, threshold)
+            return handler(result)
+
+        return None
 
     def _claim_handler(self, mode, threshold=None):
         return {

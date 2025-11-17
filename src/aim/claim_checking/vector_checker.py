@@ -16,11 +16,14 @@ class RetrieverChecker(ClaimChecker):
         Fetch reference documents using user-provided retriever function.
         
         Args:
-            retriever_request: User's async function (query: str, **kwargs) -> List[str]
-            **kwargs: Passed through to retriever_request (must include 'query')
+            retriever_request: User's async function (query: str) -> List[str]
+            **kwargs: Must include 'query'. Other kwargs are filtered out.
         """
-        query = kwargs.pop("query")
-        documents = await retriever_request(query, **kwargs)
+        query = kwargs.get("query")
+        if not query:
+            raise ValueError("query is required for retriever_request")
+        # Only pass the query to the retriever, not other kwargs like 'claims'
+        documents = await retriever_request(query)
         return documents
 
     def chunk_content(self, documents: List[str]) -> List[str]:
